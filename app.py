@@ -1,9 +1,17 @@
+import os
+
 import streamlit as st
+from dotenv import load_dotenv
+from langchain.chat_models import ChatOpenAI
+from langchain.schema import HumanMessage
+
+load_dotenv()
 
 st.title("Langchain Streamlit App")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -18,7 +26,13 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        response = "Hello, I am the assistant. I am here to help you."
-        st.markdown(response)
+        chat = ChatOpenAI(
+            model_name=os.environ["OPENAI_API_MODEL"],
+            temperature=os.environ["OPENAI_API_TEMPERATURE"],
+            openai_api_key=os.environ["OPENAI_API_KEY"],
+        )
+        messages = [HumanMessage(content=prompt)]
+        response = chat(messages)
+        st.markdown(response.content)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
