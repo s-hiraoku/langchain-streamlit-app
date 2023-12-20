@@ -3,7 +3,21 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage
+from langchain.agents import load_tools, initialize_agent, AgentType
+from langchain.callbacks import StreamlitCallbackHandler
+
+
+def create_def_chain():
+    chat = ChatOpenAI(
+        model_name=os.environ["OPENAI_API_MODEL"],
+        temperature=os.environ["OPENAI_API_TEMPERATURE"],
+        openai_api_key=os.environ["OPENAI_API_KEY"],
+        streaming=True,
+    )
+
+    tools = load_tools(["ddg-search", "wikipedia"])
+    return initialize_agent(tools, chat, agent=AgentType.OPENAI_FUNCTIONS)
+
 
 load_dotenv()
 
@@ -19,6 +33,7 @@ for message in st.session_state.messages:
 
 prompt = st.chat_input("What is up?")
 
+
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -26,13 +41,9 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        chat = ChatOpenAI(
-            model_name=os.environ["OPENAI_API_MODEL"],
-            temperature=os.environ["OPENAI_API_TEMPERATURE"],
-            openai_api_key=os.environ["OPENAI_API_KEY"],
-        )
-        messages = [HumanMessage(content=prompt)]
-        response = chat(messages)
-        st.markdown(response.content)
+        callback = StreamlitCallbackHandler(st.container())
+        agent_chain = create_def_chain()
+        response = agent_chain.run(prompt, callbacks=[callback])
+        st.markdown(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
